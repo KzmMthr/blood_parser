@@ -21,4 +21,4 @@ windows: ```cd venv/Scripts```
 ```pip3 install -r requirements.txt```
 
 # Запускаем скрипт:
-python3 parser.py
+```python3 parser.py```
