@@ -15,7 +15,7 @@ class Spider():
         self.result = []
 
     def get_regions_url(self, url) -> list:
-        '''Get and parse regions urls'''
+        '''Get regions urls'''
         self._page = requests.get(url)
         self._soup = BeautifulSoup(self._page.text, 'lxml')
         self.regions = []
@@ -35,7 +35,7 @@ class Spider():
             raise e
 
     def get_cities_url(self, urls: list) -> list:
-        '''Get and parse cities urls from region urls'''
+        '''Parse cities urls from region urls'''
         self.cities = []
         for url in urls:
             self._page = requests.get(url)
@@ -62,6 +62,13 @@ class Spider():
         self._items = {}
         self._items['url'] = url
         self._items['country'] = 'Россия'
+        self._traf_lights_convert = {
+            'max': 'no_need',
+            'min': 'need',
+            'middle': 'need',
+            'gray': 'unknown',
+            'not': 'no_need'
+        }
 
         try:
             region = re.findall(r'\s(.*)', str(self._soup.find(
@@ -72,10 +79,10 @@ class Spider():
                 'a', text=re.compile(r'Город.*')).text)
                                 )
             self._items['city'] = city[0]
-            name = self._soup.find('h1').text
-            self._items['name'] = name
+            name = self._soup.find('h1',).text
+            self._items['name'] = re.findall(r'[А-Я].+', name)[0]
             address = self._soup.find('strong', text=re.compile(r'Адрес.*')).parent
-            self._items['address'] = address.text
+            self._items['address'] = re.findall(r'[а-яА-Я].*', address.text)[0]
         except Exception as e:
             raise e
 
@@ -93,7 +100,8 @@ class Spider():
                     if len(resus_list) == 2:
                         self._bloodlines[f'{group_blood[0]}_plus'], \
                         self._bloodlines[f'{group_blood[0]}_minus'] = \
-                            resus_list[0], resus_list[1]
+                            self._traf_lights_convert[resus_list[0]], \
+                            self._traf_lights_convert[resus_list[1]]
                     else:
                         self._bloodlines[f'{group_blood[0]}_plus'], \
                         self._bloodlines[f'{group_blood[0]}_minus'] = \
@@ -101,6 +109,7 @@ class Spider():
         except Exception as e:
             raise e
 
+        print(f'Found {self._items["city"]} city')
         self._items['bloodlines'] = self._bloodlines
         return self._items
 
@@ -115,5 +124,5 @@ url = 'https://yadonor.ru/donorstvo/gde-sdat/map-lights/'
 obj = Spider()
 regions_url = obj.get_regions_url(url)
 cities_url = obj.get_cities_url(regions_url)
-with open("bloodstations.json", "w") as write_file:
+with open("bloodstations.json", "w", encoding='utf-8') as write_file:
     json.dump(obj.display_data(cities_url), write_file, indent=4)
